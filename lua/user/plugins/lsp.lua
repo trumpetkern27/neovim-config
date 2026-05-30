@@ -104,10 +104,10 @@ return {
 
 			-- Swift / Apple platforms only. xcrun doesn't exist off macOS.
 			if vim.fn.has("mac") == 1 then
-				vim.lsp.config("sourcekit_lsp", {
+				vim.lsp.config("sourcekit", {
 					cmd = { "xcrun", "sourcekit-lsp" },
 				})
-				vim.lsp.enable("sourcekit_lsp")
+				vim.lsp.enable("sourcekit")
 			end
 		end,
 	},
