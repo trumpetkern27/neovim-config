@@ -1,18 +1,10 @@
 require "user.options"
 require "user.keymaps"
 require "user.lazy"
---require "user.plugins"
---require "user.colorscheme"
---require "user.cmp"
---require "user.lsp"
---require "user.telescope"
---require "user.treesitter"
---require "user.autopairs"
---require "user.nvim-tree"
---require "user.lualine"
---require "user.bufferline"
---require "user.gitsigns"
---require "user.surround"
---require "user.flash"
---require "user.toggleterm"
---require "user.which-key"
+
+vim.filetype.add({
+	extension = {
+		razor = "razor",
+		cshtml = "razor",
+	}
+})
