@@ -58,3 +58,5 @@ keymap("t", "<C-l>", "<C-\\><C-N><C-w>l", term_opts)
 -- keeps previous yank when pasting over something
 keymap("v", "p", '"_dP', opts)
 
+-- rebind for visual block mode bc terminals like ctrl v
+keymap("n", "<leader>v", "<C-v>", term_opts)

@@ -27,6 +27,27 @@
 --    it just initialises bufstate and the LspNotify autocmd. Once
 --    Roslyn registers diagnostic support, the next edit triggers a real
 --    pull through that autocmd.
+--
+-- 3. BufWritePost -> _refresh every roslyn-attached buffer.
+--    _enable's auto-pull only fires on textDocument/didChange and
+--    /didOpen, so file A is only refreshed when A itself is edited.
+--    The cross-file scenario (file A imports something defined in file
+--    B; B didn't exist yet so A is red; you create the type in B and
+--    :w) needs A to re-pull *without* A being edited.
+--
+--    In pull mode the LSP-spec way for that to happen is the server
+--    sending workspace/diagnostic/refresh, which nvim wires through
+--    runtime/lua/vim/lsp/handlers.lua:672 -> diagnostic.on_refresh ->
+--    _refresh on every enrolled buffer. Roslyn does send it, but its
+--    background analyzer is asynchronous: the refresh request can land
+--    seconds after :w. If you Alt-Tab back to file A before that ping
+--    arrives, A still shows its stale red.
+--
+--    BufWritePost is a deterministic post-save invalidation point.
+--    Pulling diagnostics on every roslyn-attached buffer here is fine
+--    because saves are rare; the previous "BufWritePost + InsertLeave"
+--    version was bad specifically because InsertLeave fires
+--    mid-typing and cancels in-flight pulls. We only do it on save.
 return {
 	"seblyng/roslyn.nvim",
 	ft = { "cs", "razor", "cshtml" },
@@ -60,14 +81,30 @@ return {
 			})
 		end
 
+		local group = vim.api.nvim_create_augroup("user_roslyn_diag", { clear = true })
+
 		vim.api.nvim_create_autocmd("LspAttach", {
-			group = vim.api.nvim_create_augroup("user_roslyn_diag_enable", { clear = true }),
+			group = group,
 			callback = function(args)
 				local client = vim.lsp.get_client_by_id(args.data.client_id)
 				if not client or client.name ~= "roslyn" then
 					return
 				end
 				pcall(vim.lsp.diagnostic._enable, args.buf)
+			end,
+		})
+
+		vim.api.nvim_create_autocmd("BufWritePost", {
+			group = group,
+			callback = function(args)
+				local clients = vim.lsp.get_clients({ name = "roslyn", bufnr = args.buf })
+				for _, client in ipairs(clients) do
+					for buf in pairs(client.attached_buffers or {}) do
+						if vim.api.nvim_buf_is_loaded(buf) then
+							pcall(vim.lsp.diagnostic._refresh, buf, client.id)
+						end
+					end
+				end
 			end,
 		})
 	end,

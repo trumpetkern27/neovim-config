@@ -36,6 +36,16 @@ return {
 			return mason_root .. "/" .. exe
 		end
 
+		dap.adapters.coreclr = {
+			type = 'executable',
+			-- On Windows the binary must include the .exe extension; libuv
+			-- (used to spawn the adapter) does not resolve it automatically.
+			command = vim.fn.has("win32") == 1
+				and 'C:/Program Files/misc/netcoredbg.exe'
+				or 'netcoredbg',
+			args = {'--interpreter=vscode'}
+		}
+
 		dap.adapters.codelldb = {
 			type = "server",
 			port = "${port}",
@@ -101,6 +111,49 @@ return {
 		for _, lang in ipairs({ "c", "cpp", "rust" }) do
 			dap.configurations[lang] = { launch, launch_with_args }
 		end
+
+		-- Find the most likely application DLL to launch: locate each .csproj
+		-- under the cwd, derive its assembly name, and look for the matching
+		-- built dll under bin/Debug/net*/. Returns the newest match so a
+		-- freshly-built target framework wins.
+		local function find_dotnet_dll()
+			local cwd = vim.fn.getcwd()
+			local csprojs = vim.fn.glob(cwd .. "/**/*.csproj", true, true)
+			for _, proj in ipairs(csprojs) do
+				local name = vim.fn.fnamemodify(proj, ":t:r")
+				local dir = vim.fn.fnamemodify(proj, ":h")
+				local dlls = vim.fn.glob(dir .. "/bin/Debug/net*/" .. name .. ".dll", true, true)
+				if #dlls > 0 then
+					return dlls[#dlls]
+				end
+			end
+			return cwd .. "/"
+		end
+
+		local cs_last_dll = nil
+
+		dap.configurations.cs = {
+			{
+				type = "coreclr",
+				name = "launch - netcoredbg",
+				request = "launch",
+				program = function()
+					local p = vim.fn.input("Path to dll: ", cs_last_dll or find_dotnet_dll(), "file")
+					cs_last_dll = p
+					return p
+				end,
+				-- Run from the dll's output directory so appsettings.json and
+				-- other content-root relative files resolve correctly.
+				cwd = function()
+					return vim.fn.fnamemodify(cs_last_dll or find_dotnet_dll(), ":h")
+				end,
+				stopAtEntry = false,
+				-- Run the app in an integrated terminal buffer so Console
+				-- output (launch banner, Console.WriteLine, request logs) is
+				-- visible, instead of being swallowed by DAP output events.
+				console = "integratedTerminal",
+			},
+		}
 
 		-- Generic debug keymaps. These are intentionally distinct from the
 		-- xcodebuild bindings (which use <leader>x* for build/test). Use
