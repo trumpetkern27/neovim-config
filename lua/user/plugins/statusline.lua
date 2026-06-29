@@ -189,7 +189,7 @@ ins_left { 'location' }
 ins_left {
 	'diagnostics',
 	sources = {'nvim_diagnostic'},
-	symbols = {error = '🗿', warn = '🚩', info = '🍋'},
+	symbols = {error = '🗿 ', warn = '🚩 ', info = '🍋 ', hint = '📎 '},
 	diagnostics_color = {
 		error = {fg = colors.red},
 		warn = {fg = colors.yellow},
@@ -232,7 +232,6 @@ ins_right {
 }
 ins_right {
 	"o:encoding",
-	cond = conditions.hide_in_width,
 	fmt = string.upper,
 	cond = conditions.hide_in_width,
 	color = {fg = colors.magenta},
