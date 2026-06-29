@@ -15,10 +15,7 @@ local colors = {
 }
 
 local function git_branch()
-	local branch = vim.fn.system(
-		'git branch --show-current'
-	)
-	return vim.fn.trim(branch)
+	return vim.b.gitsigns_head or ""
 end
 
 local conditions = {
