@@ -56,8 +56,31 @@ local config = {
 		lualine_z = {},
 		lualine_c = {},
 		lualine_x = {},
-
-	}
+	},
+	-- winbar = {
+	-- 	lualine_a = {},
+	-- 	lualine_b = {},
+	-- 	lualine_y = {},
+	-- 	lualine_z = {},
+	-- 	lualine_c = {},
+	-- 	lualine_x = {},
+	-- },
+	-- inactive_winbar = {
+	-- 	lualine_a = {},
+	-- 	lualine_b = {},
+	-- 	lualine_y = {},
+	-- 	lualine_z = {},
+	-- 	lualine_c = {},
+	-- 	lualine_x = {},
+	-- },
+	-- tabline = {
+	-- 	lualine_a = {},
+	-- 	lualine_b = {},
+	-- 	lualine_y = {},
+	-- 	lualine_z = {},
+	-- 	lualine_c = {},
+	-- 	lualine_x = {}
+	-- }
 }
 
 local function ins_left(component)
@@ -153,6 +176,7 @@ ins_left {
 
 ins_left {
 	'branch',
+	icon = '⸙',
 	color = function()
 		local branch = git_branch()
 		if branch:match("main") or branch:match("master") then
