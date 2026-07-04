@@ -261,13 +261,13 @@ ins_right {
 	color = {fg = colors.magenta},
 }
 -- ins_right {'filename', cond = conditions.buffer_not_empty, color = {fg = colors.magenta, gui = 'bold' },}
-ins_right {
-	'fileformat',
-	cond = conditions.hide_in_width,
-	fmt = string.upper,
-	icons_enabled = false,
-	color = {fg = colors.green, gui = 'bold'}
-}
+-- ins_right {
+-- 	'fileformat',
+-- 	cond = conditions.hide_in_width,
+-- 	fmt = string.upper,
+-- 	icons_enabled = false,
+-- 	color = {fg = colors.green, gui = 'bold'}
+-- }
 
 
 

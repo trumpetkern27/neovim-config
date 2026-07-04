@@ -5,7 +5,7 @@ return {
 		local lint = require("lint")
 
 		lint.linters_by_ft = {
-			swift = { "swiftlint" },
+			-- swift = { "swiftlint" },
 		}
 
 		local lint_augroup = vim.api.nvim_create_augroup("lint", {clear = true})
