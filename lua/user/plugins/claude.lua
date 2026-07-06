@@ -4,6 +4,13 @@ return {
 		"folke/snacks.nvim",
 	},
 	config = true,
+	opts = {
+		terminal = {
+			snacks_win_opts = {
+				wo = { winhighlight = "Normal:Normal,NormalNC:Normal" },
+			},
+		},
+	},
 	cmd = {
 		"ClaudeCode",
 		"ClaudeCodeFocus",

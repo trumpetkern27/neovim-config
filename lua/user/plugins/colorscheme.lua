@@ -12,6 +12,8 @@ return {
 		vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "#000000", fg = "#d31908" })
 		vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "#000000", fg = "#d31908" })
 		vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
+		vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "#000000" })
+		vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "#000000" })
 		-- vim.api.nvim_set_hl(0, "WarningMsg", { fg = "#d31908" })
 		-- vim.api.nvim_set_hl(0, "Normal", { fg = "#FFFFFF" })
 		-- vim.api.nvim_set_hl(0, "Number", { fg = "#14a0e5" })
