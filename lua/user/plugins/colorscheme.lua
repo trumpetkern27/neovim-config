@@ -5,15 +5,29 @@ return {
 	config = function()
 		vim.cmd.colorscheme("tokyonight-night")
 
-		vim.api.nvim_set_hl(0, "Normal", { bg = "#000000" })
-		vim.api.nvim_set_hl(0, "LineNr", { bg = "#000000", fg = "#d31908" })
-		vim.api.nvim_set_hl(0, "NormalNC", {bg = "#000000"})
-		vim.api.nvim_set_hl(0, "WinSeparator", {fg = "#000000", bg = "#000000"})
-		vim.api.nvim_set_hl(0, "LineNrAbove", { bg = "#000000", fg = "#d31908" })
-		vim.api.nvim_set_hl(0, "LineNrBelow", { bg = "#000000", fg = "#d31908" })
-		vim.api.nvim_set_hl(0, "SignColumn", { bg = "#000000" })
-		vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "#000000" })
-		vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "#000000" })
+		local bg
+		if vim.fn.has('win32') == 1 then
+			bg = "#000000"
+		elseif vim.fn.has('linux') == 1 then
+			bg = "none"
+		else -- mac
+			bg = "#000000"
+		end
+
+		
+		vim.api.nvim_set_hl(0, "Normal", { bg = bg })
+		vim.api.nvim_set_hl(0, "LineNr", { bg = bg, fg = "#23d5f0" })
+		vim.api.nvim_set_hl(0, "LineNrAbove", { bg = bg, fg = "#23d5f0" })
+		vim.api.nvim_set_hl(0, "LineNrBelow", { bg = bg, fg = "#23d5f0" })
+		vim.api.nvim_set_hl(0, "CursorLineNr", { bg = bg, fg = "#c7ff60" })
+		vim.api.nvim_set_hl(0, "NormalNC", {bg = bg})
+		vim.api.nvim_set_hl(0, "WinSeparator", {fg = bg, bg = bg })
+		vim.api.nvim_set_hl(0, "SignColumn", { bg =  bg })
+		vim.api.nvim_set_hl(0, "SnacksNormal", { bg =  bg })
+		vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg =  bg })
+		vim.api.nvim_set_hl(0, "StatusLine", { bg =  bg })
+		vim.api.nvim_set_hl(0, "StatusLineNC", { bg =  bg })
+		vim.api.nvim_set_hl(0, "TabLineFill", { bg =  bg })
 		-- vim.api.nvim_set_hl(0, "WarningMsg", { fg = "#d31908" })
 		-- vim.api.nvim_set_hl(0, "Normal", { fg = "#FFFFFF" })
 		-- vim.api.nvim_set_hl(0, "Number", { fg = "#14a0e5" })
