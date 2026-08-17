@@ -60,3 +60,8 @@ keymap("v", "p", '"_dP', opts)
 
 -- rebind for visual block mode bc terminals like ctrl v
 keymap("n", "<leader>v", "<C-v>", term_opts)
+
+-- search
+keymap("n", "n", "nzz", opts)
+keymap("n", "N", "Nzz", opts)
+keymap("c", "<CR>", "getcmdtype() =~ '[/?]' ? '<CR>zz' : '<CR>'", { noremap = true, expr = true })
