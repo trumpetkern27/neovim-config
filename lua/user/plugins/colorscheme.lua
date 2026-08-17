@@ -7,7 +7,7 @@ return {
 
 		local bg
 		if vim.fn.has('win32') == 1 then
-			bg = "#000000"
+			bg = "none"
 		elseif vim.fn.has('linux') == 1 then
 			bg = "none"
 		else -- mac
