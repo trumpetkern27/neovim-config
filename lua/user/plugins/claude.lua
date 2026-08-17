@@ -5,6 +5,7 @@ return {
 	},
 	config = true,
 	opts = {
+		terminal_cmd = "claude",
 		terminal = {
 			snacks_win_opts = {
 				wo = { winhighlight = "Normal:Normal,NormalNC:Normal" },

@@ -60,6 +60,8 @@ vim.cmd [[set formatoptions-=cro]]
 -- launched from a shell whose PATH was loaded before those dirs existed.
 -- Windows only: on Linux/macOS these typically come from the login shell.
 if vim.fn.has("win32") == 1 then
+	vim.o.shell = "pwsh.exe"
+	vim.o.shellxquote = ""
 	local home = vim.env.USERPROFILE or vim.fn.expand("~")
 	local extra = {
 		home .. "\\.cargo\\bin",     -- rustup / cargo install --root

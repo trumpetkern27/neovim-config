@@ -1,5 +1,13 @@
+local bg
+if vim.fn.has('win32') == 1 then
+	bg = "#000000"
+elseif vim.fn.has('linux') == 1 then
+	bg = "none"
+else -- mac
+	bg = "#000000"
+end
 local colors = {
-	bg = "#000000",
+	bg = bg,
 	fg = "#FFFFFF",
 	yellow = "#ecbe7b",
 	cyan = "#008080",
@@ -37,7 +45,7 @@ local config = {
 		component_separators = '',
 		section_separators = '',
 		theme = {
-			normal = { c = { fg = colors.fg, bg = colors. bg }},
+			normal = { c = { fg = colors.fg, bg = colors.bg }},
 			inactive = { c = { fg = colors.fg, bg = colors.bg }},
 		},
 	},
