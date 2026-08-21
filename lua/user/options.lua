@@ -45,6 +45,18 @@ vim.api.nvim_create_autocmd("FileType", {
 	end,
 })
 
+vim.opt.wrap = false
+
+-- wrap for md
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = "markdown",
+	callback = function()
+		vim.opt_local.wrap = true
+		vim.opt_local.linebreak = true
+		vim.opt_local.breakindent = true
+	end,
+})
+
 vim.opt.shortmess:append "c"
 
 for k, v in pairs(options) do
@@ -60,7 +72,7 @@ vim.cmd [[set formatoptions-=cro]]
 -- launched from a shell whose PATH was loaded before those dirs existed.
 -- Windows only: on Linux/macOS these typically come from the login shell.
 if vim.fn.has("win32") == 1 then
-	vim.o.shell = "pwsh.exe"
+	vim.o.shell = "powershell"
 	vim.o.shellxquote = ""
 	local home = vim.env.USERPROFILE or vim.fn.expand("~")
 	local extra = {
