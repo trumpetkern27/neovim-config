@@ -19,6 +19,8 @@ return {
 			log_level = vim.log.levels.ERROR,
 			formatters_by_ft = {
 				swift = { "swiftformat" },
+				cpp = {"clang_format"},
+				c = {"clang_format"},
 				-- Add more here as you want them. Anything missing falls
 				-- through to "no formatter for this buffer" -- which is the
 				-- correct, non-destructive behavior.
