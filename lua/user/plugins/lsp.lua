@@ -102,6 +102,60 @@ return {
 				vim.lsp.enable(server)
 			end
 
+			-- clangd platform toggle.
+			--
+			-- clangd runs the preprocessor ONCE and follows a single branch,
+			-- chosen by the target triple. On Windows `_WIN32` is defined, so
+			-- `#ifndef _WIN32` POSIX branches are treated as dead code and never
+			-- diagnosed. There is no "check both platforms" mode -- so to get
+			-- real errors inside a POSIX branch we flip clangd's whole view to
+			-- a Linux target (headers come from the WSL Arch sysroot). Doing so
+			-- darkens the Windows branch, which is why this is a toggle rather
+			-- than permanent.
+			--
+			-- Mechanism: we keep two sibling templates in the project root --
+			-- compile_flags.win.txt and compile_flags.posix.txt -- and copy the
+			-- chosen one over the live compile_flags.txt, then restart clangd.
+			local function clangd_switch(mode)
+				local src = "compile_flags." .. mode .. ".txt"
+				local base = vim.fn.expand("%:p:h")
+				if base == "" then
+					base = vim.fn.getcwd()
+				end
+				local found = vim.fs.find(src, { upward = true, path = base })[1]
+				if not found then
+					vim.notify("clangd toggle: " .. src .. " not found above this buffer", vim.log.levels.ERROR)
+					return
+				end
+				local root = vim.fs.dirname(found)
+				local dst = root .. "/compile_flags.txt"
+
+				local fin = assert(io.open(found, "rb"))
+				local data = fin:read("*a")
+				fin:close()
+				local fout = assert(io.open(dst, "wb"))
+				fout:write(data)
+				fout:close()
+
+				for _, client in ipairs(vim.lsp.get_clients({ name = "clangd" })) do
+					client:stop()
+				end
+				-- Give the old clangd a moment to exit, then re-edit the buffer
+				-- so vim.lsp.enable("clangd") re-attaches a fresh process that
+				-- reads the swapped flags. If it doesn't reattach, just `:edit`.
+				vim.defer_fn(function()
+					vim.cmd("edit")
+					vim.notify("clangd -> " .. mode .. "  (" .. dst .. ")")
+				end, 500)
+			end
+
+			vim.api.nvim_create_user_command("ClangdPosix", function()
+				clangd_switch("posix")
+			end, { desc = "clangd: Linux/POSIX view via WSL sysroot (checks #ifndef _WIN32)" })
+			vim.api.nvim_create_user_command("ClangdWindows", function()
+				clangd_switch("win")
+			end, { desc = "clangd: back to the Windows build view" })
+
 			-- Swift / Apple platforms only. xcrun doesn't exist off macOS.
 			if vim.fn.has("mac") == 1 then
 				vim.lsp.config("sourcekit", {
