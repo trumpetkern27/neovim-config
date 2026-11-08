@@ -54,8 +54,38 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.wrap = true
 		vim.opt_local.linebreak = true
 		vim.opt_local.breakindent = true
+		vim.opt_local.spell = true
+		vim.opt_local.spelllang = "en_us"
 	end,
 })
+
+-- ugly spaces for yaml
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = { "yaml", "yaml.gitlab" },
+	callback = function()
+		vim.bo.expandtab = true
+		vim.bo.shiftwidth = 4
+		vim.bo.softtabstop = 4
+	end,
+})
+
+-- Respect project .editorconfig / .prettierrc, EXCEPT indent/tab width.
+-- Repos set `tab_width`/`indent_size` to 8 only so the 180-column limit is
+-- counted the same everywhere; locally we still want tabs to *render* 4 wide.
+-- indent_style (tabs vs spaces) is left untouched so tab-vs-space per repo
+-- is still honored -- we only pin the widths.
+local user_width = 4
+local editorconfig = require("editorconfig")
+-- `tab_width` -> how wide a tab glyph renders (tabstop).
+editorconfig.properties.tab_width = function(bufnr)
+	vim.bo[bufnr].tabstop = user_width
+end
+-- `indent_size` -> how many columns one indent level is (shiftwidth). Without
+-- this, `indent_size = 8` makes each level two tabs and renders 8 wide again.
+editorconfig.properties.indent_size = function(bufnr)
+	vim.bo[bufnr].shiftwidth = user_width
+	vim.bo[bufnr].softtabstop = -1 -- follow shiftwidth
+end
 
 vim.opt.shortmess:append "c"
 
