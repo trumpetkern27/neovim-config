@@ -1,6 +1,8 @@
 return {
 	"rcarriga/nvim-dap-ui",
-	dependencies = { "mfussenegger/nvim-dap", },
+	-- nvim-nio is a hard requirement of dap-ui (it drives the async element
+	-- rendering); without it `require("dapui")` errors out on load.
+	dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
 	lazy = true,
 	config = function()
 		require("dapui").setup({

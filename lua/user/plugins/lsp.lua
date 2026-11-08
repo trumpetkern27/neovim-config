@@ -86,6 +86,75 @@ return {
 				end,
 			})
 
+			-- Plain .js files with no tsconfig/jsconfig get an "inferred project",
+			-- and tsserver only reports SYNTAX errors there -- semantic ones
+			-- (undeclared variable, bad argument type) are silently dropped.
+			-- That's why `for (num in arr)` linted clean but threw
+			-- "ReferenceError: num is not defined" under node.
+			-- implicitProjectConfiguration.checkJs defaults to false; flipping it
+			-- here turns on semantic diagnostics for every .js buffer without
+			-- needing a jsconfig.json in each project.
+			-- Caveat: checkJs also surfaces the implicit-any family ("Parameter
+			-- 'x' implicitly has an 'any' type"). noImplicitAny is NOT reachable
+			-- from settings -- the server only forwards checkJs,
+			-- experimentalDecorators, strict, strictNullChecks,
+			-- strictFunctionTypes, module and target into the inferred project.
+			-- It's also all-or-nothing per project, so a tsconfig couldn't split
+			-- js from ts either. Hence the client-side filter below: drop these
+			-- codes in .js buffers (where you can't annotate), keep every one of
+			-- them in .ts buffers (where you can).
+			local implicit_any_codes = {
+				[7005] = true, -- Variable implicitly has an 'any' type
+				[7006] = true, -- Parameter implicitly has an 'any' type
+				[7008] = true, -- Member implicitly has an 'any' type
+				[7009] = true, -- 'new' expression implicitly has an 'any' type
+				[7010] = true, -- Function lacking return annotation
+				[7011] = true, -- Function expression lacking return annotation
+				[7015] = true, -- Element implicitly 'any' (non-numeric index)
+				[7016] = true, -- Untyped module import
+				[7017] = true, -- Element implicitly 'any' (no index signature)
+				[7018] = true, -- Object literal property implicitly 'any'
+				[7019] = true, -- Rest parameter implicitly 'any[]'
+				[7022] = true, -- Self-referential initializer
+				[7023] = true, -- Function implicitly has return type 'any'
+				[7024] = true, -- Function implicitly has return type 'any'
+				[7026] = true, -- JSX element implicitly has type 'any'
+				[7031] = true, -- Binding element implicitly has an 'any' type
+				[7034] = true, -- Variable implicitly 'any' in some locations
+				[7053] = true, -- Element implicitly 'any' (string index)
+			}
+
+			-- ts_ls advertises no diagnosticProvider, so diagnostics arrive by
+			-- push (textDocument/publishDiagnostics), not pull. Hooking the pull
+			-- handler here would silently do nothing.
+			local function strip_implicit_any(err, result, ctx)
+				if result and type(result.uri) == "string" and result.diagnostics then
+					-- Match on the URI rather than the buffer: the buffer may not
+					-- be loaded yet when diagnostics land for an imported file.
+					if result.uri:match("%.[cm]?jsx?$") then
+						local kept = {}
+						for _, d in ipairs(result.diagnostics) do
+							if not implicit_any_codes[tonumber(d.code)] then
+								kept[#kept + 1] = d
+							end
+						end
+						result.diagnostics = kept
+					end
+				end
+				return vim.lsp.handlers["textDocument/publishDiagnostics"](err, result, ctx)
+			end
+
+			vim.lsp.config("ts_ls", {
+				settings = {
+					implicitProjectConfiguration = {
+						checkJs = true,
+					},
+				},
+				handlers = {
+					["textDocument/publishDiagnostics"] = strip_implicit_any,
+				},
+			})
+
 			-- Servers we want attached. Roslyn (C#) intentionally not here --
 			-- roslyn.nvim registers and enables it itself, and its cmd is
 			-- overridden in plugins/roslyn.lua to dodge the Windows .cmd

@@ -1,9 +1,12 @@
 -- Cross-platform debug adapter setup.
 --
--- Adapter:
---   codelldb (LLVM-backed lldb wrapper, supports c/cpp/rust). Installed via
---   mason: `:MasonInstall codelldb`. Mason puts it under
---   nvim-data/mason/packages/codelldb/extension/adapter/codelldb[.exe].
+-- Adapters:
+--   codelldb        (LLVM-backed lldb wrapper, supports c/cpp/rust)
+--   netcoredbg      (c#, expected on PATH / a fixed path on Windows)
+--   js-debug-adapter (vscode-js-debug, for node/javascript/typescript)
+--
+-- The mason-managed ones install via `:MasonInstall codelldb js-debug-adapter`
+-- and land under nvim-data/mason/packages/<pkg>/.
 --
 -- macOS extras (keymaps + xcodebuild integration) live in xcodebuild.lua so
 -- this file stays portable.
@@ -12,14 +15,18 @@ return {
 	dependencies = {
 		"jay-babu/mason-nvim-dap.nvim",
 		"williamboman/mason.nvim",
+		-- dap-ui configures itself (see nvim-dap-ui.lua) but has no load
+		-- trigger of its own, so without this it never loaded and the
+		-- auto-open listeners never got registered.
+		"rcarriga/nvim-dap-ui",
 	},
 	config = function()
 		local dap = require("dap")
 
-		-- Make sure mason actually installs codelldb. mason-nvim-dap also
+		-- Make sure mason actually installs the adapters. mason-nvim-dap also
 		-- registers DAP-side adapter wiring for packages it knows about.
 		require("mason-nvim-dap").setup({
-			ensure_installed = { "codelldb" },
+			ensure_installed = { "codelldb", "js-debug-adapter" },
 			automatic_installation = true,
 			-- We define our own configs below; let mason-nvim-dap only do
 			-- adapter setup (the `default_setup` it ships with has been known
@@ -34,6 +41,14 @@ return {
 			local mason_root = vim.fn.stdpath("data") .. "/mason/packages/codelldb/extension/adapter"
 			local exe = vim.fn.has("win32") == 1 and "codelldb.exe" or "codelldb"
 			return mason_root .. "/" .. exe
+		end
+
+		-- vscode-js-debug ships as a node program rather than a standalone
+		-- binary, so we run it with whatever `node` is on PATH. It listens on
+		-- the port nvim-dap picks and speaks DAP over TCP.
+		local function js_debug_server()
+			return vim.fn.stdpath("data")
+				.. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js"
 		end
 
 		dap.adapters.coreclr = {
@@ -59,6 +74,23 @@ return {
 			},
 		}
 
+		-- js-debug exposes several debug "types" from one server; `pwa-node` is
+		-- the node one. The adapter is registered under each type name we use
+		-- because nvim-dap looks the adapter up by the config's `type`.
+		dap.adapters["pwa-node"] = {
+			type = "server",
+			host = "127.0.0.1",
+			port = "${port}",
+			executable = {
+				command = "node",
+				-- The host argument is not optional in practice: given only a
+				-- port, dapDebugServer binds ::1, and nvim-dap connects to
+				-- 127.0.0.1 -- so every session dies with ECONNREFUSED (and the
+				-- error message unhelpfully reports the literal "${port}").
+				args = { js_debug_server(), "${port}", "127.0.0.1" },
+			},
+		}
+
 		-- C / C++ / Rust launch configurations. "Launch file" prompts for the
 		-- executable; "Launch file with args" also prompts for argv. Args
 		-- accept whitespace-split tokens, or `@path/to/file` to pass a single
@@ -79,6 +111,41 @@ return {
 			return { contents }
 		end
 
+		-- Shell-ish argv splitting. There is no shell between this prompt and
+		-- the debuggee, so a plain whitespace split turns `foo bar` into two
+		-- argv entries -- surprising when the program expects one. Honor
+		-- single and double quotes for grouping. No escapes, no variable or
+		-- glob expansion: use the @file form for anything fancier.
+		local function split_args(raw)
+			local args, cur, quote = {}, nil, nil
+			for ch in raw:gmatch(".") do
+				if quote then
+					if ch == quote then
+						quote = nil
+					else
+						cur = (cur or "") .. ch
+					end
+				elseif ch == "'" or ch == '"' then
+					quote = ch
+					cur = cur or ""
+				elseif ch:match("%s") then
+					if cur then
+						table.insert(args, cur)
+						cur = nil
+					end
+				else
+					cur = (cur or "") .. ch
+				end
+			end
+			if cur then
+				table.insert(args, cur)
+			end
+			if quote then
+				vim.notify("dap: unterminated " .. quote .. " in args", vim.log.levels.WARN)
+			end
+			return args
+		end
+
 		local launch = {
 			type = "codelldb",
 			request = "launch",
@@ -91,6 +158,14 @@ return {
 			end,
 			cwd = "${workspaceFolder}",
 			stopOnEntry = false,
+			-- Let the adapter launch the process itself instead of handing off
+			-- to codelldb-launch in an integrated terminal. The handoff races:
+			-- if the adapter closes the socket before sending the launch
+			-- payload, the launcher dies with
+			--   Error("EOF while parsing a value", line: 1, column: 0)
+			-- Output still arrives as DAP output events in the dapui console.
+			-- Tradeoff: no interactive stdin.
+			terminal = "console",
 		}
 
 		local launch_with_args = vim.tbl_extend("force", launch, {
@@ -104,12 +179,39 @@ return {
 				if raw:sub(1, 1) == "@" then
 					return read_file_as_arg(raw:sub(2))
 				end
-				return vim.split(raw, "%s+", { trimempty = true })
+				return split_args(raw)
 			end,
 		})
 
 		for _, lang in ipairs({ "c", "cpp", "rust" }) do
 			dap.configurations[lang] = { launch, launch_with_args }
+		end
+
+		-- JavaScript / TypeScript. Deliberately ONE config: nvim-dap only skips
+		-- the "select a configuration" prompt when a filetype has exactly one,
+		-- so <leader>dc on a js buffer starts debugging with zero questions.
+		-- Attach-to-process is intentionally absent -- `dap.utils.pick_process`
+		-- is unfiltered and makes you scroll the whole process table.
+		local js_configs = {
+			{
+				type = "pwa-node",
+				request = "launch",
+				name = "Launch current file",
+				program = "${file}",
+				cwd = "${workspaceFolder}",
+				sourceMaps = true,
+				-- Keep node's own internals and dependencies out of the stack
+				-- trace and out of step-into, otherwise stepping lands in
+				-- module loader shims.
+				skipFiles = { "<node_internals>/**", "${workspaceFolder}/node_modules/**" },
+				-- Run the debuggee in a terminal buffer so stdout/stdin work
+				-- normally; the "console" alternative swallows input entirely.
+				console = "integratedTerminal",
+			},
+		}
+
+		for _, lang in ipairs({ "javascript", "typescript", "javascriptreact", "typescriptreact" }) do
+			dap.configurations[lang] = js_configs
 		end
 
 		-- Find the most likely application DLL to launch: locate each .csproj
